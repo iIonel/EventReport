@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: eventreport-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=eventreport_db
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: eventreport-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017/eventreport_db
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  frontend-web:
+    build:
+      context: ./frontend/web
+      dockerfile: Dockerfile
+    container_name: eventreport-frontend-web
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  jupyter:
+    image: jupyter/minimal-notebook:latest
+    container_name: eventreport-jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./jupyter:/home/jovyan/work
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
